@@ -1,0 +1,9 @@
+{
+    "ventana_titulo": "scrcpy",
+    "paquete_juego": "com.moneytime.app",
+    "yolo_model": "best.pt",
+    "tracker_type": "bytetrack",
+    "umbral_confianza": 0.45,
+    "frecuencia_gemini_seg": 15,
+    "y_raqueta_norm": 0.88
+}
