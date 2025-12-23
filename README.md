@@ -37,6 +37,7 @@ Sistema de automatización inteligente basado en visión artificial para juegos 
  * Entrenamiento: Sube las imágenes a Roboflow y entrena usando YOLO11 Nano.
  * Ejecución: * Inicia Scrcpy.
    * Ejecuta python main.py.
+
 ⚙️ Configuración (config.json)
  * tracker_type: Cambia entre bytetrack (más rápido) o deepsort (más robusto).
  * y_raqueta_norm: Ajusta la altura de la raqueta en escala 0.0 a 1.0 según la pantalla del dispositivo.
