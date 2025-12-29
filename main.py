@@ -1,53 +1,45 @@
-import json, time, subprocess, cv2, random
+import json, time, cv2
 from vision_engine import VisionEngine
-from predictor import BallPredictor
 from ai_decision import GeminiBrain
-from watchdog import BotWatchdog
-
-with open('config.json') as f: config = json.load(f)
-vision = VisionEngine(config)
-predictor = BallPredictor(config['y_raqueta_norm'])
-brain = GeminiBrain()
-dog = BotWatchdog(config['paquete_juego'])
-
-def get_res():
-    out = subprocess.check_output("adb shell wm size", shell=True).decode()
-    return map(int, out.split(': ')[1].split('x'))
-W, H = get_res()
-
-def human_move(x_norm, y_norm):
-    # Ease-out swipe
-    x = (x_norm * W) / 1000 + random.randint(-5, 5)
-    y = (y_norm * H) / 1000
-    subprocess.run(f"adb shell input touchscreen swipe {int(x)} {int(y)} {int(x)} {int(y)} 50", shell=True)
+from controlador_manager import ControladorHibrido
 
 def main():
+    with open('config.json') as f:
+        config = json.load(f)
+    
+    print("1. Modo ADB (USB)\n2. Modo WiFi (IP)")
+    opc = input("Seleccione: ")
+    
+    if opc == "1":
+        modo, url = "adb", None
+        [span_3](start_span)W, H = 1080, 1920 # O get_res() vía ADB[span_3](end_span)
+    else:
+        modo = "network"
+        ip = "192.168.100.21" # Tu IP de la captura
+        url = f"http://{ip}:8080/stream.mjpeg"
+        W, H = 1080, 1920 # Ajustar a resolución del móvil
+
+    vision = VisionEngine(config['bot_settings'], url_stream=url)
+    control = ControladorHibrido(modo=modo, ip=ip if opc=="2" else None)
+    brain = GeminiBrain(config['api_services']['openrouter'])
     last_gemini = 0
+
     while True:
-        dog.verificar()
         frame, _ = vision.get_frame()
         if frame is None: continue
 
-        res, tracks = vision.detect_and_track(frame)
+        res, _ = vision.detect_and_track(frame)
         
-        # Lógica de Juego
-        bola = None
-        if config['tracker_type'] == "bytetrack" and res.boxes.id is not None:
-            for box in res.boxes:
-                if res.names[int(box.cls[0])] == "bola":
-                    bola = box.xyxyn[0].cpu().numpy() # [x, y]
-        
-        if bola is not None:
-            x_pred = predictor.predecir(bola[0], bola[1])
-            human_move(x_pred * 1000, config['y_raqueta_norm'] * 1000)
-        
-        # Lógica de Anuncios
-        elif (time.time() - last_gemini) > config['frecuencia_gemini_seg']:
+        # [span_4](start_span)[span_5](start_span)Lógica de detección de bola (Tu predictor)[span_4](end_span)[span_5](end_span)
+        if len(res.boxes) > 0:
+            # ... lógica de raqueta ...
+            pass
+        elif (time.time() - last_gemini) > config['bot_settings']['frecuencia_gemini_seg']:
+            # [span_6](start_span)[span_7](start_span)Uso de GeminiBrain para botones X/Claim[span_6](end_span)[span_7](end_span)
             dec = brain.analizar(frame)
-            if dec['x'] != -1: human_move(dec['x'], dec['y'])
+            if dec.get('x') and dec['x'] != -1:
+                control.click(dec['x'], dec['y'], W, H)
             last_gemini = time.time()
 
-        cv2.imshow("IA Bot Debug", frame)
-        if cv2.waitKey(1) == ord('q'): break
-
-if __name__ == "__main__": main()
+        cv2.imshow("Bot Hibrido", frame)
+        if cv2.waitKey(1) & 0xFF == ord('q'): break
